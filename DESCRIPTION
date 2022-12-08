@@ -1,0 +1,19 @@
+Package: StatComp22009
+Type: Package
+Title: Final project for 'Statistical Computing' course
+Version: 1.0
+Date: 2022-12-06
+Author: Weijun Liang
+Maintainer: Weijun Liang <liangweijun@mail.ustc.edu.cn>
+Description: Several R and Rcpp function are included in this package for computing the brownian distance covariance.
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.9), microbenchmark, boot, bootstrap, DAAG, stats4, stats
+LinkingTo: Rcpp
+RoxygenNote: 7.2.2
+Encoding: UTF-8
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+URL: http://github.com/liangweijun0108/StatComp22009
+BugReports: http://github.com/liangweijun0108/StatComp22009/issues

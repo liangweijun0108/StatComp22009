@@ -1,0 +1,106 @@
+---
+title: "intro"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{intro}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+_StatComp22009_ is the final project of 22009, which is computing the brownian distance covariance from the paper <BROWNIAN DISTANCE COVARIANCE>  by GÁBOR J. SZÉKELY1 AND MARIA L. RIZZO. Three functions are considered, namely, _dcov_(computing brownian distance covariance of the input samples),whose R and Rcpp versions are produced, _dcor_(computing brownian distance correlation of the input samples), R version only, _p_value_ (Computing the p-value of the brownian distance covariance, pearson covariance and spearman covariance), Rversion only.
+
+The source R code for _dcovR_ is as follows:
+```{r, eval=FALSE}
+dcovR<-function(x,y){
+  a <- as.matrix(dist(x))
+  b <- as.matrix(dist(y))
+  aa <- a
+  bb <- b
+  n <- ncol(a)
+  a1 <- rowMeans(a)
+  a2 <- colMeans(a)
+  b1 <- rowMeans(b)
+  b2 <- colMeans(b)
+  for (i in 1:n){
+    for (j in 1:n){
+      aa[i,j] <- a1[i]+a2[j]
+      bb[i,j] <- b1[i]+b2[j]
+    }
+  }
+  A <- a + mean(a) - aa
+  B <- b + mean(b) - bb
+  return(sqrt(mean(A*B)))
+}
+```
+
+The source Rcpp code for _dcovC_ is as follows:
+```{r, eval=FALSE}
+double dcovC(NumericVector x, NumericVector y) {
+  int n = x.size();
+  NumericMatrix a(n, n), b(n, n), A(n, n), B(n, n);
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < n; j++){
+      a(i,j) = abs(x[i] - x[j]);
+      b(i,j) = abs(y[i] - y[j]);
+    }
+  }
+  NumericVector a1 = rowMeans(a);
+  NumericVector a2 = colMeans(a);
+  NumericVector b1 = rowMeans(b);
+  NumericVector b2 = colMeans(b);
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < n; j++){
+      A(i,j) = a(i,j) + mean(a) - a1[i] - a2[j];
+      B(i,j) = b(i,j) + mean(b) - b1[i] - b2[j];
+    }
+  }
+  return (sqrt(mean(A*B)));
+}
+
+```
+
+The source Rcpp code for _dcor_ is as follows:
+```{r, eval=FALSE}
+dcor<-function(x, y){
+  a <- dcovR(x, y)^2
+  b <- dcovR(x, x) * dcovR(y, y)
+  return(sqrt(a / b))
+}
+```
+
+The source Rcpp code for _p_value_ is as follows:
+```{r, eval=FALSE}
+p_value <- function(x, y, cov_type, repl, Method=NULL){
+  a <- matrix(0, ncol = 2, nrow = length(x))
+  a[, 1] <- x;a[, 2] <- y
+  f <- function(data, i){
+    m <- data[, 1];n <- data[i, 2]
+    k <- nrow(data)
+    ifelse(is.null(Method), return(k * cov_type(m, n)^2), return(k * cov_type(m, n, method = Method)^2))
+  }
+  c <- boot(a, statistic = f, R = repl)
+  t <- c(c$t0, c$t)
+  p <- length(t[t >= t[1]]) / length(t)
+  return(p)
+}
+```
+
+To compare with other type of covariance, we compute the covariance and p-vaue of the nonlinear dataset Eckerle4.
+```{r,eval=FALSE}
+library(boot)
+data(Eckerle4)
+attach(Eckerle4)
+plot(Eckerle4)
+dcov_C <- dcovC(Eckerle4$wavelength, Eckerle4$transmitance)
+dcov_R <- dcovR(Eckerle4$wavelength, Eckerle4$transmitance)
+dcov_R
+dcov_C
+a <- Eckerle4$wavelength
+b <- Eckerle4$transmitance
+wave_tran <- data.frame(cov = c(dcor(a, b), cor(a, b, method = "pearson"), cor(a, b, method = "spearman")), pvalue = c(p_value(a, b, dcovR, repl = 999),p_value(a, b, cov, repl = 999, Method = "pearson"), p_value(a, b, cov, repl = 999, Method = "spearman")))
+rownames(wave_tran) <- c('distance','pearson','spearman')
+wave_tran
+```
+
+The result show the difference of the brownian distance covariance, the Pearson covariance and Spearman covaroance.
